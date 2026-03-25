@@ -5,9 +5,14 @@ export type ApiError = {
 };
 
 function getBaseUrl(): string {
-  // In Next.js (app router), only NEXT_PUBLIC_* is safe for browser bundles.
+  // In Next.js, only NEXT_PUBLIC_* is guaranteed in the browser bundle.
+  // However, this repo's preview manifest provides API_BASE/BACKEND_URL. We expose those
+  // by mirroring them into NEXT_PUBLIC_* via .env (already present in container), and
+  // keep fallbacks for local dev.
   return (
     process.env.NEXT_PUBLIC_OEE_API_BASE_URL?.replace(/\/$/, "") ||
+    process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") ||
+    process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ||
     "http://localhost:3001"
   );
 }

@@ -2,38 +2,46 @@ export type SocketStatus = "DISCONNECTED" | "CONNECTING" | "CONNECTED";
 
 export type LiveUpdateMessage =
   | {
-      type: "line_status";
-      payload: {
-        lineId: string;
-        oee: number;
+      type: "oee_update";
+      line_id: number;
+      run_id: number;
+      oee: {
         availability: number;
         performance: number;
         quality: number;
-        state: string;
-        at: string;
+        oee: number;
+        good_count: number;
+        scrap_count: number;
+        downtime_s: number;
+        runtime_s: number;
+        planned_production_time_s: number;
       };
     }
   | {
       type: "alert";
-      payload: {
-        id: string;
+      alert: {
+        id: number;
         severity: "info" | "warning" | "critical";
         message: string;
-        at: string;
+        created_at: string;
+        line_id: number;
+        run_id?: number | null;
+        shift_id?: number | null;
+        type: string;
+        acknowledged_at?: string | null;
       };
-    }
-  | {
-      type: "event";
-      payload: unknown;
-    }
-  | {
-      type: "ping";
-      payload: { at: string };
     };
 
-function getWsUrl(): string {
+function getWsUrl(lineId?: string): string {
   // Expected to be ws(s)://host:port/path
-  return process.env.NEXT_PUBLIC_OEE_WS_URL || "ws://localhost:3001/ws";
+  const base =
+    process.env.NEXT_PUBLIC_OEE_WS_URL ||
+    process.env.NEXT_PUBLIC_WS_URL ||
+    "ws://localhost:3001";
+  const normalized = base.replace(/\/$/, "");
+  // Backend endpoint is /ws/oee?line_id=...
+  const url = `${normalized}/ws/oee?line_id=${encodeURIComponent(lineId ?? "1")}`;
+  return url;
 }
 
 // PUBLIC_INTERFACE
@@ -73,7 +81,7 @@ export function createOeeSocketClient({
     setStatus("CONNECTING");
 
     try {
-      ws = new WebSocket(getWsUrl());
+      ws = new WebSocket(getWsUrl("1"));
     } catch {
       scheduleReconnect();
       return;

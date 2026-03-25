@@ -61,28 +61,30 @@ export default function DashboardPage() {
     const client = createOeeSocketClient({
       onStatus: setSocketStatus,
       onMessage: (m) => {
-        if (m.type === "line_status") {
+        if (m.type === "oee_update") {
+          const lineKey = `line-${String.fromCharCode(96 + Math.max(1, Math.min(3, m.line_id)))}`; // line-a..c
+          const at = new Date().toISOString();
+
           setLines((prev) =>
             prev.map((l) =>
-              l.lineId === m.payload.lineId
+              l.lineId === lineKey
                 ? {
                     ...l,
-                    oee: m.payload.oee,
-                    availability: m.payload.availability,
-                    performance: m.payload.performance,
-                    quality: m.payload.quality,
-                    state: (m.payload.state as LineStatus["state"]) ?? "UNKNOWN",
-                    lastEventAt: m.payload.at,
+                    oee: m.oee.oee,
+                    availability: m.oee.availability,
+                    performance: m.oee.performance,
+                    quality: m.oee.quality,
+                    state: "RUNNING",
+                    lastEventAt: at,
                   }
                 : l
             )
           );
+
           setOeeSeries((prev) => {
-            const series = prev[m.payload.lineId] ?? [];
-            const next = [...series, { t: shortTime(m.payload.at), oee: m.payload.oee }].slice(
-              -24
-            );
-            return { ...prev, [m.payload.lineId]: next };
+            const series = prev[lineKey] ?? [];
+            const next = [...series, { t: shortTime(at), oee: m.oee.oee }].slice(-24);
+            return { ...prev, [lineKey]: next };
           });
         }
       },
